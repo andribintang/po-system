@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
-import { api, errorText, type Paged } from '../lib/api';
+import { FileDown, FileSpreadsheet } from 'lucide-react';
+import { api, download, errorText, type Paged } from '../lib/api';
 
 interface Log { id: string; namaUser: string; aksi: string; modul: string; refId: string | null; ipAddress: string | null; createdAt: string; dataLama: unknown; dataBaru: unknown }
 const MODULES = ['ALL', 'AUTH', 'MASTER', 'USER', 'SETTINGS', 'PO', 'CASHBACK', 'PAYOUT'];
@@ -11,20 +12,39 @@ export function AuditPage() {
   const [data, setData] = useState<Paged<Log> | null>(null);
   const [error, setError] = useState('');
   const [open, setOpen] = useState<string | null>(null);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const params = (extra: Record<string, string>) => {
+    const p = new URLSearchParams({ modul, ...extra });
+    if (q) p.set('q', q);
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    return p;
+  };
+  const exportFile = (format: 'csv' | 'xlsx') => download(`/audit-logs?${params({ format })}`, `audit-trail.${format}`).catch((e) => setError(errorText(e)));
 
   useEffect(() => {
     const t = setTimeout(() => {
-      const p = new URLSearchParams({ modul, page: String(page), pageSize: '50' });
-      if (q) p.set('q', q);
+      const p = params({ page: String(page), pageSize: '50' });
       api<Paged<Log>>(`/audit-logs?${p}`).then(setData).catch((e) => setError(errorText(e)));
     }, 250);
     return () => clearTimeout(t);
-  }, [modul, q, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modul, q, page, from, to]);
 
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-slate-800">Audit Trail</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-slate-800">Audit Trail</h1>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <input type="date" className="input w-40" aria-label="Dari tanggal" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+          s/d
+          <input type="date" className="input w-40" aria-label="Sampai tanggal" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+          <button className="btn-secondary" onClick={() => exportFile('csv')}><FileDown size={16} />CSV</button>
+          <button className="btn-secondary" onClick={() => exportFile('xlsx')}><FileSpreadsheet size={16} />Excel</button>
+        </div>
+      </div>
       <div className="flex flex-wrap gap-2">
         {MODULES.map((m) => (
           <button key={m} onClick={() => { setModul(m); setPage(1); }} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${modul === m ? 'bg-blue-700 text-white' : 'bg-white text-slate-600'}`}>{m}</button>

@@ -4,7 +4,8 @@ import { AuthProvider, useAuth } from './lib/auth';
 import type { Role } from './lib/api';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/Login';
-import { ComingSoon, DashboardPage } from './pages/Dashboard';
+import { DashboardPage } from './pages/Dashboard';
+import { ReportsPage } from './pages/Reports';
 import { MasterDataPage } from './pages/MasterData';
 import { UsersPage } from './pages/Users';
 import { SettingsPage } from './pages/Settings';
@@ -57,7 +58,8 @@ export default function App() {
             <Route path="pembayaran" element={<Protected roles={PAY}><PaymentPage /></Protected>} />
             <Route path="pembayaran/tab/:tab" element={<Protected roles={PAY}><PaymentPage /></Protected>} />
             <Route path="pembayaran/:id" element={<Protected roles={PAY}><PaymentDetailPage /></Protected>} />
-            <Route path="laporan" element={<ComingSoon title="Laporan" />} />
+            <Route path="laporan" element={<Protected roles={OPS}><ReportsPage /></Protected>} />
+            <Route path="laporan/:tab" element={<Protected roles={OPS}><ReportsPage /></Protected>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

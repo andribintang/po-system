@@ -14,7 +14,7 @@ const NAV: NavItem[] = [
   { to: '/po', label: 'Purchase Order', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { to: '/cashback', label: 'Cashback Vendor', icon: HandCoins, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'] },
   { to: '/pembayaran', label: 'Pembayaran Cashback', icon: Wallet, roles: ['SUPER_ADMIN', 'KEPALA_BENGKEL'] },
-  { to: '/laporan', label: 'Laporan', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN'], soon: true },
+  { to: '/laporan', label: 'Laporan', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { to: '/master', label: 'Master Data', icon: Database, roles: ['SUPER_ADMIN'] },
   { to: '/users', label: 'Data User', icon: Users, roles: ['SUPER_ADMIN'] },
   { to: '/pengaturan', label: 'Pengaturan Perusahaan', icon: Settings, roles: ['SUPER_ADMIN'] },
@@ -30,7 +30,7 @@ export function Layout() {
   return (
     <div className="flex min-h-screen">
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-200 transition md:static md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`print:hidden fixed inset-y-0 left-0 z-40 w-64 transform bg-slate-900 text-slate-200 transition md:static md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="border-b border-slate-800 px-5 py-4">
           <div className="text-lg font-bold text-white">PO System</div>
@@ -57,7 +57,7 @@ export function Layout() {
       {open && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
+        <header className="print:hidden flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
           <button className="rounded p-1 md:hidden" onClick={() => setOpen(true)} aria-label="Menu">
             <Menu size={20} />
           </button>
@@ -72,7 +72,7 @@ export function Layout() {
           <NavLink to="/akun" className="btn-secondary" title="Ganti password"><KeyRound size={16} /></NavLink>
           <button onClick={logout} className="btn-secondary" title="Keluar"><LogOut size={16} /></button>
         </header>
-        <main className="flex-1 p-4 md:p-6">
+        <main className="flex-1 p-4 md:p-6 print:p-0">
           <Outlet />
         </main>
       </div>

@@ -5,6 +5,11 @@ import { prisma } from '../src/lib/prisma';
 
 /** Kosongkan semua tabel aplikasi (database khusus tes). */
 export async function resetDb() {
+  // Pengaman: tes mengosongkan semua tabel, jadi hanya boleh jalan di database *_test.
+  const [{ db }] = await prisma.$queryRaw<{ db: string }[]>`SELECT DATABASE() AS db`;
+  if (!db?.endsWith('_test')) {
+    throw new Error(`Tes menolak berjalan di database "${db}". Pakai DATABASE_URL yang nama database-nya berakhiran _test.`);
+  }
   const tables = await prisma.$queryRaw<{ t: string }[]>`
     SELECT table_name AS t FROM information_schema.tables
     WHERE table_schema = DATABASE() AND table_name <> '_prisma_migrations'`;
