@@ -3,8 +3,8 @@ import { env } from './lib/env';
 import { prisma } from './lib/prisma';
 
 const app = createApp();
-const server = app.listen(env.PORT, () => {
-  console.log(`PO System API berjalan di http://localhost:${env.PORT}`);
+const server = app.listen(env.PORT, env.HOST, () => {
+  console.log(`PO System API berjalan di http://${env.HOST}:${env.PORT}`);
 });
 
 async function shutdown() {

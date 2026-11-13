@@ -18,9 +18,8 @@ frontend/  Aplikasi web React + TypeScript + Vite + Tailwind CSS
 | 2 | Purchase Order (single & multi cabang, approval, cetak A4/PNG, Excel), notifikasi, Excel master data | ✅ selesai |
 | 3 | Klaim cashback vendor & distribusi otomatis per area | ✅ selesai |
 | 4 | Pembayaran cashback manual Kepala Bengkel | ✅ selesai |
-| 5 | Dashboard KPI, laporan CSV/PDF, notifikasi, deploy | ⏳ |
+| 5 | Dashboard KPI & grafik, laporan CSV/Excel/cetak, ekspor audit trail, paket deploy VPS | ✅ selesai |
 
-Skema database (`backend/prisma/schema.prisma`) sudah mencakup tabel untuk tahap 2 sampai 5.
 
 ## Menjalankan di komputer lokal
 
@@ -53,6 +52,8 @@ cd backend
 DATABASE_URL="mysql://po_app:po_app_dev@127.0.0.1:3306/po_system_test" npx prisma migrate deploy
 DATABASE_URL="mysql://po_app:po_app_dev@127.0.0.1:3306/po_system_test" npm test
 ```
+
+Tes mengosongkan seluruh tabel, jadi tes otomatis menolak berjalan bila nama database tidak berakhiran `_test`. Jangan pernah menjalankan tes di VPS produksi.
 
 ## Alur status PO
 
@@ -88,6 +89,13 @@ DRAFT → MENUNGGU_APPROVAL → APPROVED → DIKIRIM_VENDOR → DIKIRIM → DITE
 - **Cek kelayakan PO**: menjelaskan per cabang kenapa PO belum bisa dibayar (status PO, belum diklaim, sedang diproses, sudah lunas, Kepala Bengkel / rekening belum ada).
 - **Slip pembayaran** `.txt` dan unduh bukti. Kepala Bengkel hanya melihat antrean & pembayaran cabangnya.
 
+## Dashboard & laporan
+
+- **Dashboard** (semua role): 7 KPI (total & nilai PO, vendor aktif, cabang, produk, cashback diterima, dibayarkan, outstanding), tren cashback 12 bulan, rasio PAID vs UNPAID, top 5 produk & vendor, peringkat cabang (cari + halaman), dan PO terbaru.
+  Super Admin bisa memilih cabang; Admin & Kepala Bengkel otomatis hanya cabangnya, dan Kepala Bengkel tidak melihat hak perusahaan.
+- **Laporan** (Super Admin & Admin): Rekap PO, Cashback Vendor Diterima, Pembayaran Manual & Tunai. Filter tanggal, vendor, cabang, status, metode. Unduh **CSV** atau **Excel**, dan **Cetak / PDF** dari browser (menu & tombol otomatis disembunyikan saat dicetak).
+- **Audit trail**: filter modul, kata kunci, rentang tanggal, serta ekspor CSV/Excel.
+
 ## Excel
 
 - PO: ekspor (sheet Summary + Details sesuai filter), template, dan impor (baris dengan `REF_PO` sama menjadi satu PO, hasilnya DRAFT).
@@ -115,10 +123,15 @@ DRAFT → MENUNGGU_APPROVAL → APPROVED → DIKIRIM_VENDOR → DIKIRIM → DITE
 | Lihat karyawan | ✅ semua | ✅ cabangnya | ❌ |
 | Pengaturan perusahaan, audit trail | ✅ | ❌ | ❌ |
 
-## Deploy ke VPS (ringkas, detail di tahap 5)
+## Deploy ke VPS
 
-1. Pasang Node.js 20, MySQL 8, Nginx, PM2.
-2. Backend: `npm ci && npm run build && npx prisma migrate deploy && pm2 start dist/server.js --name po-api`.
-3. Frontend: `npm ci && npm run build`, sajikan folder `frontend/dist` lewat Nginx.
-4. Nginx: `location /api { proxy_pass http://127.0.0.1:4000; }` dan `try_files $uri /index.html` untuk SPA.
-5. SSL: `certbot --nginx`. Backup harian: `mysqldump` via cron + salin folder `storage/uploads`.
+Panduan lengkap langkah demi langkah ada di [`deploy/DEPLOY.md`](deploy/DEPLOY.md) (Ubuntu 24.04). Isi folder `deploy/`:
+
+| File | Fungsi |
+| --- | --- |
+| `nginx/po-system.conf` | Nginx: sajikan `frontend/dist`, proxy `/api` ke `127.0.0.1:4000`, batas login, cache aset |
+| `ecosystem.config.cjs` | PM2: jalankan API sebagai service (auto restart, log) |
+| `backup.sh` | Backup harian MySQL + folder upload, simpan 14 hari (via cron) |
+| `update.sh` | Update versi: pull, migrasi, build, `pm2 reload` tanpa downtime |
+
+HTTPS memakai Let's Encrypt (`certbot --nginx`).

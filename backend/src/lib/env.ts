@@ -6,6 +6,8 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET minimal 32 karakter'),
   JWT_EXPIRES_IN: z.string().default('8h'),
   PORT: z.coerce.number().default(4000),
+  // Di VPS isi 127.0.0.1 agar API hanya bisa diakses lewat Nginx
+  HOST: z.string().default('0.0.0.0'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGIN: z.string().optional(),
   UPLOAD_DIR: z.string().default('./storage/uploads'),

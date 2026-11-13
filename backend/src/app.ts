@@ -18,6 +18,8 @@ import masterExcelRoutes from './routes/masterExcel';
 import notificationRoutes from './routes/notifications';
 import cashbackRoutes from './routes/cashback';
 import paymentRoutes from './routes/payments';
+import dashboardRoutes from './routes/dashboard';
+import reportRoutes from './routes/reports';
 import { areaRouter, branchRouter, employeeRouter, vendorRouter } from './routes/master';
 
 export function createApp() {
@@ -66,6 +68,8 @@ export function createApp() {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/cashback', cashbackRoutes);
   app.use('/api/payments', paymentRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/reports', reportRoutes);
 
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Endpoint tidak ditemukan')));
   app.use(errorHandler);
