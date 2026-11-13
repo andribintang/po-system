@@ -12,7 +12,7 @@ interface NavItem { to: string; label: string; icon: typeof Menu; roles: Role[];
 const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'] },
   { to: '/po', label: 'Purchase Order', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { to: '/cashback', label: 'Cashback Vendor', icon: HandCoins, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'], soon: true },
+  { to: '/cashback', label: 'Cashback Vendor', icon: HandCoins, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'] },
   { to: '/pembayaran', label: 'Pembayaran Cashback', icon: Wallet, roles: ['SUPER_ADMIN', 'KEPALA_BENGKEL'], soon: true },
   { to: '/laporan', label: 'Laporan', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN'], soon: true },
   { to: '/master', label: 'Master Data', icon: Database, roles: ['SUPER_ADMIN'] },
