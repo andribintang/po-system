@@ -17,6 +17,8 @@ import { POPrintPage } from './pages/po/POPrint';
 import { CashbackPage } from './pages/cashback/CashbackList';
 import { CashbackFormPage } from './pages/cashback/CashbackForm';
 import { CashbackDetailPage } from './pages/cashback/CashbackDetail';
+import { PaymentPage } from './pages/payment/PaymentPage';
+import { PaymentDetailPage } from './pages/payment/PaymentDetail';
 
 function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, loading } = useAuth();
@@ -28,6 +30,7 @@ function Protected({ children, roles }: { children: ReactNode; roles?: Role[] })
 
 const SA: Role[] = ['SUPER_ADMIN'];
 const OPS: Role[] = ['SUPER_ADMIN', 'ADMIN'];
+const PAY: Role[] = ['SUPER_ADMIN', 'KEPALA_BENGKEL'];
 
 export default function App() {
   return (
@@ -51,7 +54,9 @@ export default function App() {
             <Route path="cashback/tab/:tab" element={<CashbackPage />} />
             <Route path="cashback/baru" element={<Protected roles={OPS}><CashbackFormPage /></Protected>} />
             <Route path="cashback/:id" element={<CashbackDetailPage />} />
-            <Route path="pembayaran" element={<ComingSoon title="Pembayaran Cashback" />} />
+            <Route path="pembayaran" element={<Protected roles={PAY}><PaymentPage /></Protected>} />
+            <Route path="pembayaran/tab/:tab" element={<Protected roles={PAY}><PaymentPage /></Protected>} />
+            <Route path="pembayaran/:id" element={<Protected roles={PAY}><PaymentDetailPage /></Protected>} />
             <Route path="laporan" element={<ComingSoon title="Laporan" />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
