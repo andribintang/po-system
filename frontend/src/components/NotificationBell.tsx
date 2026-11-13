@@ -30,6 +30,7 @@ export function NotificationBell() {
     load();
     if (n.refType === 'PO' && n.refId) nav(`/po/${n.refId}`);
     if (n.refType === 'CASHBACK' && n.refId) nav(`/cashback/${n.refId}`);
+    if (n.refType === 'PAYMENT' && n.refId) nav(`/pembayaran/${n.refId}`);
   };
 
   return (

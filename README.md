@@ -17,7 +17,7 @@ frontend/  Aplikasi web React + TypeScript + Vite + Tailwind CSS
 | 1 | Skema MySQL, login & hak akses, master data, user, pengaturan perusahaan, audit trail | ✅ selesai |
 | 2 | Purchase Order (single & multi cabang, approval, cetak A4/PNG, Excel), notifikasi, Excel master data | ✅ selesai |
 | 3 | Klaim cashback vendor & distribusi otomatis per area | ✅ selesai |
-| 4 | Pembayaran cashback manual Kepala Bengkel | ⏳ |
+| 4 | Pembayaran cashback manual Kepala Bengkel | ✅ selesai |
 | 5 | Dashboard KPI, laporan CSV/PDF, notifikasi, deploy | ⏳ |
 
 Skema database (`backend/prisma/schema.prisma`) sudah mencakup tabel untuk tahap 2 sampai 5.
@@ -78,6 +78,15 @@ DRAFT → MENUNGGU_APPROVAL → APPROVED → DIKIRIM_VENDOR → DIKIRIM → DITE
 4. Saat disimpan (satu transaksi): header klaim `CB/<YYYYMM>/<0001>`, tautan PO-cabang (unik, cegah klaim dobel), detail, dan distribusi `UNPAID` per PO/cabang/produk.
 5. Notifikasi dikirim ke Admin & Kepala Bengkel cabang terkait. Kepala Bengkel hanya melihat bagian cabangnya.
 6. Super Admin bisa membatalkan klaim selama belum ada distribusi yang masuk pembayaran; PO terkait bisa diklaim ulang.
+
+## Pembayaran cashback manual (Kepala Bengkel)
+
+- **Antrean outstanding**: distribusi `UNPAID` dikelompokkan per periode + cabang, lengkap dengan Kepala Bengkel penerima, rekening, dan nomor PO. Muncul peringatan bila cabang belum punya Kepala Bengkel aktif atau rekeningnya kosong.
+- **Proses bayar** (Super Admin): pilih item (satu periode), tanggal, metode `Transfer Bank` / `Tunai`, status `SUCCESS` (langsung lunas) atau `PENDING` (menunggu konfirmasi), no. referensi, dan bukti (gambar/PDF ≤ 2 MB, disimpan di disk).
+  Nomor `PAY-CB/<YYYYMM>/<01>`. Item dikunci dengan row lock; item yang sedang `PENDING` tidak bisa dibayar lagi.
+- **Konfirmasi**: `PENDING → SUCCESS` (distribusi menjadi `PAID`, notifikasi ke cabang) atau `PENDING → FAILED` (item kembali ke antrean).
+- **Cek kelayakan PO**: menjelaskan per cabang kenapa PO belum bisa dibayar (status PO, belum diklaim, sedang diproses, sudah lunas, Kepala Bengkel / rekening belum ada).
+- **Slip pembayaran** `.txt` dan unduh bukti. Kepala Bengkel hanya melihat antrean & pembayaran cabangnya.
 
 ## Excel
 
