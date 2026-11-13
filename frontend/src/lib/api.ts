@@ -64,3 +64,25 @@ export const rupiah = (v: string | number | null | undefined) =>
   v === null || v === undefined || v === ''
     ? '-'
     : new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 2 }).format(Number(v));
+
+/** Unduh file (Excel, dsb) dari API dengan sesi login yang sama. */
+export async function download(path: string, fallbackName: string) {
+  const res = await fetch(`/api${path}`, { credentials: 'include' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.error ?? `Error ${res.status}`);
+  }
+  const cd = res.headers.get('content-disposition') ?? '';
+  const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export const tanggal = (v: string | null | undefined) =>
+  v ? new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '-';
+
+export const angka = (v: number | string | null | undefined) => new Intl.NumberFormat('id-ID').format(Number(v ?? 0));

@@ -4,13 +4,14 @@ import {
   LayoutDashboard, Database, Users, Settings, ScrollText, FileText, Wallet, HandCoins, BarChart3, LogOut, Menu, KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { NotificationBell } from './NotificationBell';
 import { ROLE_LABEL, type Role } from '../lib/api';
 
 interface NavItem { to: string; label: string; icon: typeof Menu; roles: Role[]; soon?: boolean }
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'] },
-  { to: '/po', label: 'Purchase Order', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN'], soon: true },
+  { to: '/po', label: 'Purchase Order', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { to: '/cashback', label: 'Cashback Vendor', icon: HandCoins, roles: ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'], soon: true },
   { to: '/pembayaran', label: 'Pembayaran Cashback', icon: Wallet, roles: ['SUPER_ADMIN', 'KEPALA_BENGKEL'], soon: true },
   { to: '/laporan', label: 'Laporan', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN'], soon: true },
@@ -61,12 +62,13 @@ export function Layout() {
             <Menu size={20} />
           </button>
           <div className="flex-1" />
-          <div className="text-right text-sm">
+          <div className="hidden text-right text-sm sm:block">
             <div className="font-semibold text-slate-800">{user.nama}</div>
             <div className="text-xs text-slate-500">
               {ROLE_LABEL[user.role]} · {user.branch ? user.branch.namaCabang : 'Nasional'}
             </div>
           </div>
+          <NotificationBell />
           <NavLink to="/akun" className="btn-secondary" title="Ganti password"><KeyRound size={16} /></NavLink>
           <button onClick={logout} className="btn-secondary" title="Keluar"><LogOut size={16} /></button>
         </header>

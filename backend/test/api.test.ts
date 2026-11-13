@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { createApp } from '../src/app';
 import { prisma } from '../src/lib/prisma';
 import { resolveFee, splitCashback } from '../src/lib/fees';
+import { resetDb } from './helpers';
 
 process.env.NODE_ENV = 'test';
 const app = createApp();
@@ -27,12 +28,7 @@ let areaId: number;
 let branchId: number;
 
 before(async () => {
-  // Bersihkan tabel (urutan menghormati foreign key).
-  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=0');
-  for (const t of ['audit_logs', 'product_area_fees', 'products', 'users', 'employees', 'branches', 'areas', 'vendors', 'file_uploads', 'company_settings']) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${t}`);
-  }
-  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS=1');
+  await resetDb();
   const hash = await bcrypt.hash('Rahasia123', 4);
   const area = await prisma.area.create({ data: { kodeArea: 'JAWA', namaArea: 'Jawa' } });
   const branch = await prisma.branch.create({ data: { kodeCabang: 'C1', namaCabang: 'Cabang 1', areaId: area.id } });

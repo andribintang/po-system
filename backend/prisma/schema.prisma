@@ -569,3 +569,11 @@ model AuditLog {
   @@index([userId])
   @@map("audit_logs")
 }
+
+// Penomoran dokumen berurutan (PO, klaim, pembayaran) yang aman dari bentrok.
+model DocumentCounter {
+  key        String @id @db.VarChar(60) // contoh: PO/CBG-JKT/202611
+  lastNumber Int    @default(0) @map("last_number")
+
+  @@map("document_counters")
+}

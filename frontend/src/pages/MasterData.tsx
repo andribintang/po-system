@@ -74,6 +74,7 @@ function BranchTab() {
   return (
     <CrudPage
       key="branch"
+      excel="cabang"
       title="Cabang"
       endpoint="/branches"
       emptyForm={{ kodeCabang: '', namaCabang: '', areaId: '', kota: '', provinsi: '', npwp: '', alamat: '', status: 'ACTIVE' }}
@@ -103,6 +104,7 @@ function VendorTab() {
   return (
     <CrudPage
       key="vendor"
+      excel="vendor"
       title="Vendor"
       endpoint="/vendors"
       emptyForm={{ kodeVendor: '', namaVendor: '', pic: '', noHp: '', email: '', alamat: '', status: 'ACTIVE' }}
@@ -181,6 +183,7 @@ function ProductTab() {
   return (
     <CrudPage
       key="product"
+      excel="produk"
       title="Produk"
       endpoint="/products"
       wideForm
@@ -233,6 +236,7 @@ function EmployeeTab() {
   return (
     <CrudPage
       key="employee"
+      excel="karyawan"
       title="Karyawan"
       endpoint="/employees"
       emptyForm={{ nama: '', noHp: '', branchId: '', jabatan: 'KEPALA_BENGKEL', bank: '', nomorRekening: '', namaRekening: '', status: 'ACTIVE' }}

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import { api, errorText, type Paged } from '../lib/api';
+import { FileDown, FileUp, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { api, download, errorText, type Paged } from '../lib/api';
 import { Modal } from './Modal';
+import { ExcelImport } from './ExcelImport';
 
 export type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 export interface Option { value: string | number; label: string }
@@ -34,6 +35,8 @@ interface Props {
   extraForm?: (form: Row, setForm: (f: Row) => void) => ReactNode;
   canWrite?: boolean;
   wideForm?: boolean;
+  /** Nama entitas untuk ekspor/impor Excel master data (vendor, cabang, produk, karyawan). */
+  excel?: string;
 }
 
 export function StatusBadge({ status }: { status: string }) {
@@ -54,6 +57,7 @@ export function CrudPage(p: Props) {
   const [editing, setEditing] = useState<{ id: number | null; form: Row } | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +135,18 @@ export function CrudPage(p: Props) {
             }}
           />
         </div>
+        {p.excel && (
+          <>
+            <button className="btn-secondary" onClick={() => setShowImport(true)} title="Impor Excel"><FileUp size={16} /> Impor</button>
+            <button
+              className="btn-secondary"
+              title="Ekspor Excel"
+              onClick={() => download(`/master-excel/${p.excel}/export.xlsx`, `${p.excel}.xlsx`).catch((e) => setError(errorText(e)))}
+            >
+              <FileDown size={16} /> Ekspor
+            </button>
+          </>
+        )}
         {p.canWrite !== false && (
           <button className="btn-primary" onClick={openNew}>
             <Plus size={16} /> Tambah
@@ -185,6 +201,19 @@ export function CrudPage(p: Props) {
         </div>
       </div>
 
+      {showImport && p.excel && (
+        <ExcelImport
+          title={`Impor ${p.title} dari Excel`}
+          templatePath={`/master-excel/${p.excel}/template.xlsx`}
+          importPath={`/master-excel/${p.excel}/import`}
+          onClose={() => setShowImport(false)}
+          onDone={() => load()}
+          describe={(r) => {
+            const x = r as { created: number; updated: number };
+            return `${x.created} data baru ditambahkan, ${x.updated} data diperbarui`;
+          }}
+        />
+      )}
       {editing && (
         <Modal title={`${editing.id ? 'Edit' : 'Tambah'} ${p.title}`} onClose={() => setEditing(null)} wide={p.wideForm}>
           <form
