@@ -1,0 +1,571 @@
+// Skema database PO & Cashback System (MySQL 8)
+// Catatan desain:
+// - Semua nominal uang memakai DECIMAL(15,2), bukan float.
+// - Relasi banyak-ke-banyak memakai tabel relasi (bukan string dipisah koma / array).
+// - Data master & transaksi memakai soft delete (deleted_at) agar jejak audit tetap utuh.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── ENUM ─────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  KEPALA_BENGKEL
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Jabatan {
+  KEPALA_BENGKEL
+  SERVICE_ADVISOR
+  LAINNYA
+}
+
+enum POStatus {
+  DRAFT
+  MENUNGGU_APPROVAL
+  APPROVED
+  DIKIRIM_VENDOR
+  DIKIRIM
+  DITERIMA
+  SELESAI
+  CANCEL
+}
+
+enum MetodePengiriman {
+  TRANSFER
+  CASH
+}
+
+enum DistributionStatus {
+  UNPAID
+  PAID
+  REFUND
+}
+
+enum PaymentMethod {
+  TRANSFER_MANUAL
+  CASH
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum NotificationType {
+  PO_CREATED
+  PO_APPROVED
+  GOODS_SHIPPED
+  GOODS_RECEIVED
+  CASHBACK_RECEIVED
+  CASHBACK_PAID
+}
+
+// ───────────────────────── AUTH & USER ─────────────────────────
+
+model User {
+  id           Int          @id @default(autoincrement())
+  nama         String       @db.VarChar(120)
+  email        String       @unique @db.VarChar(160)
+  passwordHash String       @map("password_hash") @db.VarChar(100)
+  noHp         String?      @map("no_hp") @db.VarChar(30)
+  role         UserRole
+  // NULL = akses nasional (SUPER_ADMIN). Wajib untuk ADMIN & KEPALA_BENGKEL.
+  branchId     Int?         @map("branch_id")
+  // Untuk KEPALA_BENGKEL: tautan ke data karyawan penerima cashback.
+  employeeId   Int?         @unique @map("employee_id")
+  status       RecordStatus @default(ACTIVE)
+  lastLoginAt  DateTime?    @map("last_login_at")
+  // Dinaikkan saat password diganti / akun dinonaktifkan, untuk membatalkan token lama.
+  tokenVersion Int          @default(0) @map("token_version")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  deletedAt    DateTime?    @map("deleted_at")
+
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+  employee Employee? @relation(fields: [employeeId], references: [id])
+
+  createdPOs        PurchaseOrder[]    @relation("POCreatedBy")
+  approvedPOs       PurchaseOrder[]    @relation("POApprovedBy")
+  poStatusHistories POStatusHistory[]
+  createdReceipts   CashbackReceipt[]  @relation("ReceiptCreatedBy")
+  createdPayments   CashbackPayment[]  @relation("PaymentCreatedBy")
+  confirmedPayments CashbackPayment[]  @relation("PaymentConfirmedBy")
+  uploads           FileUpload[]
+  auditLogs         AuditLog[]
+  notificationReads NotificationRead[]
+
+  @@index([role])
+  @@index([branchId])
+  @@map("users")
+}
+
+// ───────────────────────── MASTER DATA ─────────────────────────
+
+model Area {
+  id        Int          @id @default(autoincrement())
+  kodeArea  String       @unique @map("kode_area") @db.VarChar(30)
+  namaArea  String       @map("nama_area") @db.VarChar(100)
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+  deletedAt DateTime?    @map("deleted_at")
+
+  branches Branch[]
+  fees     ProductAreaFee[]
+
+  @@map("areas")
+}
+
+model Branch {
+  id         Int          @id @default(autoincrement())
+  kodeCabang String       @unique @map("kode_cabang") @db.VarChar(30)
+  namaCabang String       @map("nama_cabang") @db.VarChar(120)
+  alamat     String?      @db.Text
+  kota       String?      @db.VarChar(80)
+  provinsi   String?      @db.VarChar(80)
+  npwp       String?      @db.VarChar(40)
+  areaId     Int          @map("area_id")
+  status     RecordStatus @default(ACTIVE)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  deletedAt  DateTime?    @map("deleted_at")
+
+  area           Area                    @relation(fields: [areaId], references: [id])
+  users          User[]
+  employees      Employee[]
+  purchaseOrders PurchaseOrder[]
+  poDetails      PODetail[]
+  receiptPOs     CashbackReceiptPO[]
+  receiptDetails CashbackReceiptDetail[]
+  distributions  CashbackDistribution[]
+  paymentDetails PaymentDetail[]
+
+  @@index([areaId])
+  @@map("branches")
+}
+
+model Vendor {
+  id         Int          @id @default(autoincrement())
+  kodeVendor String       @unique @map("kode_vendor") @db.VarChar(30)
+  namaVendor String       @map("nama_vendor") @db.VarChar(150)
+  alamat     String?      @db.Text
+  pic        String?      @db.VarChar(100)
+  noHp       String?      @map("no_hp") @db.VarChar(30)
+  email      String?      @db.VarChar(160)
+  status     RecordStatus @default(ACTIVE)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+  deletedAt  DateTime?    @map("deleted_at")
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+  receipts       CashbackReceipt[]
+
+  @@map("vendors")
+}
+
+model Employee {
+  id            Int          @id @default(autoincrement())
+  nama          String       @db.VarChar(120)
+  noHp          String?      @map("no_hp") @db.VarChar(30)
+  branchId      Int          @map("branch_id")
+  jabatan       Jabatan
+  bank          String?      @db.VarChar(60)
+  nomorRekening String?      @map("nomor_rekening") @db.VarChar(40)
+  namaRekening  String?      @map("nama_rekening") @db.VarChar(120)
+  status        RecordStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  deletedAt     DateTime?    @map("deleted_at")
+
+  branch         Branch          @relation(fields: [branchId], references: [id])
+  user           User?
+  paymentDetails PaymentDetail[]
+
+  @@index([branchId, jabatan])
+  @@map("employees")
+}
+
+model Product {
+  id                  Int          @id @default(autoincrement())
+  kodeProduk          String       @unique @map("kode_produk") @db.VarChar(40)
+  namaProduk          String       @map("nama_produk") @db.VarChar(150)
+  merek               String?      @db.VarChar(80)
+  vendorId            Int          @map("vendor_id")
+  unit                String       @default("PCS") @db.VarChar(20)
+  isiPerDus           Int          @map("isi_per_dus")
+  hargaBeli           Decimal      @map("harga_beli") @db.Decimal(15, 2)
+  // Tarif default, dipakai bila area cabang tidak punya tarif khusus.
+  feeVendorPerPcs     Decimal      @map("fee_vendor_per_pcs") @db.Decimal(15, 2)
+  feeKabengPerPcs     Decimal      @map("fee_kabeng_per_pcs") @db.Decimal(15, 2)
+  feePerusahaanPerPcs Decimal      @map("fee_perusahaan_per_pcs") @db.Decimal(15, 2)
+  status              RecordStatus @default(ACTIVE)
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  deletedAt           DateTime?    @map("deleted_at")
+
+  vendor         Vendor                  @relation(fields: [vendorId], references: [id])
+  areaFees       ProductAreaFee[]
+  poDetails      PODetail[]
+  receiptDetails CashbackReceiptDetail[]
+  distributions  CashbackDistribution[]
+
+  @@index([vendorId])
+  @@map("products")
+}
+
+// Pengganti `area_fees` (Record<string, ...>) di Firestore.
+model ProductAreaFee {
+  id                  Int      @id @default(autoincrement())
+  productId           Int      @map("product_id")
+  areaId              Int      @map("area_id")
+  feeVendorPerPcs     Decimal  @map("fee_vendor_per_pcs") @db.Decimal(15, 2)
+  feeKabengPerPcs     Decimal  @map("fee_kabeng_per_pcs") @db.Decimal(15, 2)
+  feePerusahaanPerPcs Decimal  @map("fee_perusahaan_per_pcs") @db.Decimal(15, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  area    Area    @relation(fields: [areaId], references: [id])
+
+  @@unique([productId, areaId])
+  @@map("product_area_fees")
+}
+
+model CompanySettings {
+  id                  Int      @id @default(1)
+  namaPerusahaan      String   @map("nama_perusahaan") @db.VarChar(150)
+  alamatPusat         String?  @map("alamat_pusat") @db.Text
+  telepon             String?  @db.VarChar(40)
+  fax                 String?  @db.VarChar(40)
+  email               String?  @db.VarChar(160)
+  website             String?  @db.VarChar(160)
+  npwp                String?  @db.VarChar(40)
+  picDefaultPenyetuju String?  @map("pic_default_penyetuju") @db.VarChar(120)
+  logoFileId          Int?     @map("logo_file_id")
+  signatureFileId     Int?     @map("signature_file_id")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  logoFile      FileUpload? @relation("CompanyLogo", fields: [logoFileId], references: [id])
+  signatureFile FileUpload? @relation("CompanySignature", fields: [signatureFileId], references: [id])
+
+  @@map("company_settings")
+}
+
+// ───────────────────────── PURCHASE ORDER (tahap 2) ─────────────────────────
+
+model PurchaseOrder {
+  id           Int       @id @default(autoincrement())
+  poNumber     String    @unique @map("po_number") @db.VarChar(40)
+  tanggalPo    DateTime  @map("tanggal_po") @db.Date
+  vendorId     Int       @map("vendor_id")
+  // NULL bila PO multi cabang (cabang ditentukan per baris detail).
+  branchId     Int?      @map("branch_id")
+  isMulti      Boolean   @default(false) @map("is_multi")
+  status       POStatus  @default(DRAFT)
+  totalDus     Int       @default(0) @map("total_dus")
+  totalPcs     Int       @default(0) @map("total_pcs")
+  grandTotal   Decimal   @default(0) @map("grand_total") @db.Decimal(15, 2)
+  catatan      String?   @db.Text
+  createdById  Int       @map("created_by")
+  approvedById Int?      @map("approved_by")
+  approvedAt   DateTime? @map("approved_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  vendor          Vendor                  @relation(fields: [vendorId], references: [id])
+  branch          Branch?                 @relation(fields: [branchId], references: [id])
+  createdBy       User                    @relation("POCreatedBy", fields: [createdById], references: [id])
+  approvedBy      User?                   @relation("POApprovedBy", fields: [approvedById], references: [id])
+  details         PODetail[]
+  statusHistories POStatusHistory[]
+  receiptPOs      CashbackReceiptPO[]
+  receiptDetails  CashbackReceiptDetail[]
+  distributions   CashbackDistribution[]
+
+  @@index([status])
+  @@index([vendorId])
+  @@index([branchId])
+  @@index([tanggalPo])
+  @@map("purchase_orders")
+}
+
+model PODetail {
+  id         Int     @id @default(autoincrement())
+  poId       Int     @map("po_id")
+  productId  Int     @map("product_id")
+  // Selalu terisi: sama dengan header untuk PO single, per baris untuk PO multi.
+  branchId   Int     @map("branch_id")
+  namaProduk String  @map("nama_produk") @db.VarChar(150)
+  qtyDus     Int     @map("qty_dus")
+  isiPerDus  Int     @map("isi_per_dus")
+  totalPcs   Int     @map("total_pcs")
+  harga      Decimal @db.Decimal(15, 2)
+  subtotal   Decimal @db.Decimal(15, 2)
+
+  po      PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  product Product       @relation(fields: [productId], references: [id])
+  branch  Branch        @relation(fields: [branchId], references: [id])
+
+  @@index([poId])
+  @@index([branchId])
+  @@map("po_details")
+}
+
+model POStatusHistory {
+  id         Int       @id @default(autoincrement())
+  poId       Int       @map("po_id")
+  fromStatus POStatus? @map("from_status")
+  toStatus   POStatus  @map("to_status")
+  userId     Int       @map("user_id")
+  catatan    String?   @db.VarChar(255)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  po   PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id])
+
+  @@index([poId])
+  @@map("po_status_histories")
+}
+
+// ───────────────────────── CASHBACK (tahap 3) ─────────────────────────
+
+model CashbackReceipt {
+  id               Int              @id @default(autoincrement())
+  receiptNo        String           @unique @map("receipt_no") @db.VarChar(40)
+  vendorId         Int              @map("vendor_id")
+  periode          String           @db.Char(7) // YYYY-MM
+  tanggal          DateTime         @db.Date
+  metodePengiriman MetodePengiriman @map("metode_pengiriman")
+  totalCashback    Decimal          @map("total_cashback") @db.Decimal(15, 2)
+  buktiFileId      Int?             @map("bukti_file_id")
+  catatan          String?          @db.Text
+  createdById      Int              @map("created_by")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  vendor        Vendor                  @relation(fields: [vendorId], references: [id])
+  buktiFile     FileUpload?             @relation(fields: [buktiFileId], references: [id])
+  createdBy     User                    @relation("ReceiptCreatedBy", fields: [createdById], references: [id])
+  pos           CashbackReceiptPO[]
+  details       CashbackReceiptDetail[]
+  distributions CashbackDistribution[]
+
+  @@index([periode])
+  @@index([vendorId])
+  @@map("cashback_receipts")
+}
+
+// Pengganti `po_id` dipisah koma. Unik per (PO, cabang) agar tidak diklaim dobel.
+model CashbackReceiptPO {
+  id        Int @id @default(autoincrement())
+  receiptId Int @map("receipt_id")
+  poId      Int @map("po_id")
+  branchId  Int @map("branch_id")
+
+  receipt CashbackReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  po      PurchaseOrder   @relation(fields: [poId], references: [id])
+  branch  Branch          @relation(fields: [branchId], references: [id])
+
+  @@unique([poId, branchId])
+  @@index([receiptId])
+  @@map("cashback_receipt_pos")
+}
+
+model CashbackReceiptDetail {
+  id              Int     @id @default(autoincrement())
+  receiptId       Int     @map("receipt_id")
+  poId            Int?    @map("po_id")
+  productId       Int     @map("product_id")
+  branchId        Int     @map("branch_id")
+  qtyPcs          Int     @map("qty_pcs")
+  feeVendorPerPcs Decimal @map("fee_vendor_per_pcs") @db.Decimal(15, 2)
+  totalFee        Decimal @map("total_fee") @db.Decimal(15, 2)
+
+  receipt CashbackReceipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  po      PurchaseOrder?  @relation(fields: [poId], references: [id])
+  product Product         @relation(fields: [productId], references: [id])
+  branch  Branch          @relation(fields: [branchId], references: [id])
+
+  @@index([receiptId])
+  @@map("cashback_receipt_details")
+}
+
+model CashbackDistribution {
+  id                  Int                @id @default(autoincrement())
+  periode             String             @db.Char(7)
+  receiptId           Int                @map("receipt_id")
+  poId                Int?               @map("po_id")
+  branchId            Int                @map("branch_id")
+  productId           Int                @map("product_id")
+  qtyPcs              Int                @map("qty_pcs")
+  feeKabengPerPcs     Decimal            @map("fee_kabeng_per_pcs") @db.Decimal(15, 2)
+  totalFeeKabeng      Decimal            @map("total_fee_kabeng") @db.Decimal(15, 2)
+  feePerusahaanPerPcs Decimal            @map("fee_perusahaan_per_pcs") @db.Decimal(15, 2)
+  totalFeePerusahaan  Decimal            @map("total_fee_perusahaan") @db.Decimal(15, 2)
+  status              DistributionStatus @default(UNPAID)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  receipt      CashbackReceipt     @relation(fields: [receiptId], references: [id])
+  po           PurchaseOrder?      @relation(fields: [poId], references: [id])
+  branch       Branch              @relation(fields: [branchId], references: [id])
+  product      Product             @relation(fields: [productId], references: [id])
+  paymentItems PaymentDetailItem[]
+
+  @@index([status, periode, branchId])
+  @@map("cashback_distributions")
+}
+
+// ───────────────────────── PEMBAYARAN MANUAL (tahap 4) ─────────────────────────
+
+model CashbackPayment {
+  id            Int           @id @default(autoincrement())
+  paymentNo     String        @unique @map("payment_no") @db.VarChar(40) // PAY-CB/YYYYMM/XX
+  periode       String        @db.Char(7)
+  tanggalBayar  DateTime      @map("tanggal_bayar") @db.Date
+  metode        PaymentMethod
+  totalBayar    Decimal       @map("total_bayar") @db.Decimal(15, 2)
+  status        PaymentStatus @default(PENDING)
+  catatan       String?       @db.Text
+  buktiFileId   Int?          @map("bukti_file_id")
+  createdById   Int           @map("created_by")
+  confirmedById Int?          @map("confirmed_by")
+  confirmedAt   DateTime?     @map("confirmed_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  buktiFile   FileUpload?     @relation("PaymentBukti", fields: [buktiFileId], references: [id])
+  createdBy   User            @relation("PaymentCreatedBy", fields: [createdById], references: [id])
+  confirmedBy User?           @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id])
+  details     PaymentDetail[]
+
+  @@index([status, periode])
+  @@map("cashback_payments")
+}
+
+model PaymentDetail {
+  id                  Int           @id @default(autoincrement())
+  paymentId           Int           @map("payment_id")
+  employeeId          Int           @map("employee_id")
+  branchId            Int           @map("branch_id")
+  // Snapshot rekening saat pembayaran dibuat.
+  bank                String?       @db.VarChar(60)
+  rekening            String?       @db.VarChar(40)
+  namaRekening        String?       @map("nama_rekening") @db.VarChar(120)
+  nominal             Decimal       @db.Decimal(15, 2)
+  status              PaymentStatus @default(PENDING)
+  referensiPembayaran String?       @map("referensi_pembayaran") @db.VarChar(120)
+  buktiFileId         Int?          @map("bukti_file_id")
+
+  payment   CashbackPayment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  employee  Employee            @relation(fields: [employeeId], references: [id])
+  branch    Branch              @relation(fields: [branchId], references: [id])
+  buktiFile FileUpload?         @relation("PaymentDetailBukti", fields: [buktiFileId], references: [id])
+  items     PaymentDetailItem[]
+
+  @@index([paymentId])
+  @@map("payment_details")
+}
+
+// Pengganti `dist_ids: string[]`.
+model PaymentDetailItem {
+  id              Int     @id @default(autoincrement())
+  paymentDetailId Int     @map("payment_detail_id")
+  distributionId  Int     @map("distribution_id")
+  nominal         Decimal @db.Decimal(15, 2)
+
+  paymentDetail PaymentDetail        @relation(fields: [paymentDetailId], references: [id], onDelete: Cascade)
+  distribution  CashbackDistribution @relation(fields: [distributionId], references: [id])
+
+  @@unique([paymentDetailId, distributionId])
+  @@index([distributionId])
+  @@map("payment_detail_items")
+}
+
+// ───────────────────────── FILE, NOTIFIKASI, AUDIT ─────────────────────────
+
+// File disimpan di disk VPS (folder UPLOAD_DIR); database hanya menyimpan path-nya.
+model FileUpload {
+  id           Int      @id @default(autoincrement())
+  originalName String   @map("original_name") @db.VarChar(255)
+  storedPath   String   @map("stored_path") @db.VarChar(255)
+  mimeType     String   @map("mime_type") @db.VarChar(100)
+  size         Int
+  uploadedById Int      @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  uploadedBy        User              @relation(fields: [uploadedById], references: [id])
+  companyLogos      CompanySettings[] @relation("CompanyLogo")
+  companySignatures CompanySettings[] @relation("CompanySignature")
+  receipts          CashbackReceipt[]
+  payments          CashbackPayment[] @relation("PaymentBukti")
+  paymentDetails    PaymentDetail[]   @relation("PaymentDetailBukti")
+
+  @@map("file_uploads")
+}
+
+model Notification {
+  id         Int              @id @default(autoincrement())
+  type       NotificationType
+  title      String           @db.VarChar(150)
+  message    String           @db.VarChar(500)
+  refType    String?          @map("ref_type") @db.VarChar(40)
+  refId      Int?             @map("ref_id")
+  // Target penerima: NULL = semua role / semua cabang.
+  targetRole UserRole?        @map("target_role")
+  branchId   Int?             @map("branch_id")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  reads NotificationRead[]
+
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationRead {
+  notificationId Int      @map("notification_id")
+  userId         Int      @map("user_id")
+  readAt         DateTime @default(now()) @map("read_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@map("notification_reads")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  namaUser  String   @map("nama_user") @db.VarChar(120)
+  aksi      String   @db.VarChar(60)
+  modul     String   @db.VarChar(30) // AUTH, MASTER, USER, PO, CASHBACK, PAYOUT, SETTINGS
+  refId     String?  @map("ref_id") @db.VarChar(60)
+  dataLama  Json?    @map("data_lama")
+  dataBaru  Json?    @map("data_baru")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([modul, createdAt])
+  @@index([userId])
+  @@map("audit_logs")
+}

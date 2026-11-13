@@ -1,0 +1,17 @@
+# MySQL 8 untuk development lokal. Di VPS boleh pakai MySQL yang terpasang langsung.
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_dev_only
+      MYSQL_DATABASE: po_system
+      MYSQL_USER: po_app
+      MYSQL_PASSWORD: po_app_dev
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+volumes:
+  mysql_data:
