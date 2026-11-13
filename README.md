@@ -16,7 +16,7 @@ frontend/  Aplikasi web React + TypeScript + Vite + Tailwind CSS
 | --- | --- | --- |
 | 1 | Skema MySQL, login & hak akses, master data, user, pengaturan perusahaan, audit trail | ✅ selesai |
 | 2 | Purchase Order (single & multi cabang, approval, cetak A4/PNG, Excel), notifikasi, Excel master data | ✅ selesai |
-| 3 | Klaim cashback vendor & distribusi otomatis per area | ⏳ |
+| 3 | Klaim cashback vendor & distribusi otomatis per area | ✅ selesai |
 | 4 | Pembayaran cashback manual Kepala Bengkel | ⏳ |
 | 5 | Dashboard KPI, laporan CSV/PDF, notifikasi, deploy | ⏳ |
 
@@ -68,6 +68,16 @@ DRAFT → MENUNGGU_APPROVAL → APPROVED → DIKIRIM_VENDOR → DIKIRIM → DITE
 - PO hanya bisa diedit saat DRAFT. Hapus = soft delete, hanya untuk DRAFT (atau CANCEL oleh Super Admin).
 - Nomor PO otomatis `PO/<KODE_CABANG|MULTI>/<YYYYMM>/<0001>`, aman dari bentrok (tabel `document_counters`).
 - Total, subtotal, dan harga dihitung ulang di server; angka dari browser diabaikan.
+
+## Klaim cashback & distribusi
+
+1. Admin / Super Admin memilih vendor, lalu mencentang PO (status Approved ke atas) yang belum diklaim. PO multi cabang tampil dan diklaim per cabang.
+2. Bisa ditambah baris manual (cabang, produk, jumlah pcs) untuk cashback yang tidak terkait PO di sistem.
+3. Tarif per pcs diambil dari tarif khusus area cabang; bila tidak ada, dari tarif default produk.
+   `Klaim vendor = pcs × fee vendor`, `Hak Kepala Bengkel = pcs × fee kabeng`, `Hak perusahaan = pcs × fee perusahaan`.
+4. Saat disimpan (satu transaksi): header klaim `CB/<YYYYMM>/<0001>`, tautan PO-cabang (unik, cegah klaim dobel), detail, dan distribusi `UNPAID` per PO/cabang/produk.
+5. Notifikasi dikirim ke Admin & Kepala Bengkel cabang terkait. Kepala Bengkel hanya melihat bagian cabangnya.
+6. Super Admin bisa membatalkan klaim selama belum ada distribusi yang masuk pembayaran; PO terkait bisa diklaim ulang.
 
 ## Excel
 

@@ -14,6 +14,9 @@ import { POListPage } from './pages/po/POList';
 import { POFormPage } from './pages/po/POForm';
 import { PODetailPage } from './pages/po/PODetail';
 import { POPrintPage } from './pages/po/POPrint';
+import { CashbackPage } from './pages/cashback/CashbackList';
+import { CashbackFormPage } from './pages/cashback/CashbackForm';
+import { CashbackDetailPage } from './pages/cashback/CashbackDetail';
 
 function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, loading } = useAuth();
@@ -44,7 +47,10 @@ export default function App() {
             <Route path="po/baru" element={<Protected roles={OPS}><POFormPage /></Protected>} />
             <Route path="po/:id" element={<Protected roles={OPS}><PODetailPage /></Protected>} />
             <Route path="po/:id/edit" element={<Protected roles={OPS}><POFormPage /></Protected>} />
-            <Route path="cashback" element={<ComingSoon title="Cashback Vendor" />} />
+            <Route path="cashback" element={<CashbackPage />} />
+            <Route path="cashback/tab/:tab" element={<CashbackPage />} />
+            <Route path="cashback/baru" element={<Protected roles={OPS}><CashbackFormPage /></Protected>} />
+            <Route path="cashback/:id" element={<CashbackDetailPage />} />
             <Route path="pembayaran" element={<ComingSoon title="Pembayaran Cashback" />} />
             <Route path="laporan" element={<ComingSoon title="Laporan" />} />
           </Route>

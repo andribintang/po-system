@@ -29,6 +29,7 @@ export function NotificationBell() {
     if (!n.read) await api(`/notifications/${n.id}/read`, { method: 'POST' }).catch(() => undefined);
     load();
     if (n.refType === 'PO' && n.refId) nav(`/po/${n.refId}`);
+    if (n.refType === 'CASHBACK' && n.refId) nav(`/cashback/${n.refId}`);
   };
 
   return (
