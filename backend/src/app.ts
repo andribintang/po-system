@@ -13,6 +13,9 @@ import productRoutes from './routes/products';
 import fileRoutes from './routes/files';
 import settingsRoutes from './routes/settings';
 import auditRoutes from './routes/audit';
+import poRoutes from './routes/po';
+import masterExcelRoutes from './routes/masterExcel';
+import notificationRoutes from './routes/notifications';
 import { areaRouter, branchRouter, employeeRouter, vendorRouter } from './routes/master';
 
 export function createApp() {
@@ -56,6 +59,9 @@ export function createApp() {
   app.use('/api/files', fileRoutes);
   app.use('/api/company-settings', settingsRoutes);
   app.use('/api/audit-logs', auditRoutes);
+  app.use('/api/po', poRoutes);
+  app.use('/api/master-excel', masterExcelRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Endpoint tidak ditemukan')));
   app.use(errorHandler);

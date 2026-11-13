@@ -23,12 +23,44 @@ async function mustExist(model: 'area' | 'branch' | 'vendor', id: number, label:
   if (!row) throw new HttpError(400, `${label} tidak ditemukan`);
 }
 
+
+export const areaSchema = z.object({ kodeArea: kode(30), namaArea: z.string().trim().min(1).max(100), status });
+export const branchSchema = z.object({
+    kodeCabang: kode(30),
+    namaCabang: z.string().trim().min(1).max(120),
+    alamat: optStr(2000),
+    kota: optStr(80),
+    provinsi: optStr(80),
+    npwp: optStr(40),
+    areaId: fk,
+    status,
+  });
+export const vendorSchema = z.object({
+    kodeVendor: kode(30),
+    namaVendor: z.string().trim().min(1).max(150),
+    alamat: optStr(2000),
+    pic: optStr(100),
+    noHp: optStr(30),
+    email: z.string().trim().email().max(160).optional().nullable().or(z.literal('').transform(() => null)),
+    status,
+  });
+export const employeeSchema = z.object({
+    nama: z.string().trim().min(1).max(120),
+    noHp: optStr(30),
+    branchId: fk,
+    jabatan: z.enum(['KEPALA_BENGKEL', 'SERVICE_ADVISOR', 'LAINNYA']),
+    bank: optStr(60),
+    nomorRekening: optStr(40),
+    namaRekening: optStr(120),
+    status,
+  });
+
 const ALL = ['SUPER_ADMIN', 'ADMIN', 'KEPALA_BENGKEL'] as const;
 
 export const areaRouter = crudRouter({
   model: 'area',
   label: 'Area',
-  schema: z.object({ kodeArea: kode(30), namaArea: z.string().trim().min(1).max(100), status }),
+  schema: areaSchema,
   searchFields: ['kodeArea', 'namaArea'],
   orderBy: { namaArea: 'asc' },
   readRoles: [...ALL],
@@ -41,16 +73,7 @@ export const areaRouter = crudRouter({
 export const branchRouter = crudRouter({
   model: 'branch',
   label: 'Cabang',
-  schema: z.object({
-    kodeCabang: kode(30),
-    namaCabang: z.string().trim().min(1).max(120),
-    alamat: optStr(2000),
-    kota: optStr(80),
-    provinsi: optStr(80),
-    npwp: optStr(40),
-    areaId: fk,
-    status,
-  }),
+  schema: branchSchema,
   searchFields: ['kodeCabang', 'namaCabang', 'kota'],
   orderBy: { namaCabang: 'asc' },
   include: { area: { select: { id: true, kodeArea: true, namaArea: true } } },
@@ -66,15 +89,7 @@ export const branchRouter = crudRouter({
 export const vendorRouter = crudRouter({
   model: 'vendor',
   label: 'Vendor',
-  schema: z.object({
-    kodeVendor: kode(30),
-    namaVendor: z.string().trim().min(1).max(150),
-    alamat: optStr(2000),
-    pic: optStr(100),
-    noHp: optStr(30),
-    email: z.string().trim().email().max(160).optional().nullable().or(z.literal('').transform(() => null)),
-    status,
-  }),
+  schema: vendorSchema,
   searchFields: ['kodeVendor', 'namaVendor', 'pic'],
   orderBy: { namaVendor: 'asc' },
   readRoles: ['SUPER_ADMIN', 'ADMIN'],
@@ -87,16 +102,7 @@ export const vendorRouter = crudRouter({
 export const employeeRouter = crudRouter({
   model: 'employee',
   label: 'Karyawan',
-  schema: z.object({
-    nama: z.string().trim().min(1).max(120),
-    noHp: optStr(30),
-    branchId: fk,
-    jabatan: z.enum(['KEPALA_BENGKEL', 'SERVICE_ADVISOR', 'LAINNYA']),
-    bank: optStr(60),
-    nomorRekening: optStr(40),
-    namaRekening: optStr(120),
-    status,
-  }),
+  schema: employeeSchema,
   searchFields: ['nama', 'nomorRekening'],
   orderBy: { nama: 'asc' },
   include: { branch: { select: { id: true, kodeCabang: true, namaCabang: true } } },

@@ -15,7 +15,7 @@ frontend/  Aplikasi web React + TypeScript + Vite + Tailwind CSS
 | Tahap | Isi | Status |
 | --- | --- | --- |
 | 1 | Skema MySQL, login & hak akses, master data, user, pengaturan perusahaan, audit trail | ✅ selesai |
-| 2 | Purchase Order (single & multi cabang, approval, cetak, Excel) | ⏳ |
+| 2 | Purchase Order (single & multi cabang, approval, cetak A4/PNG, Excel), notifikasi, Excel master data | ✅ selesai |
 | 3 | Klaim cashback vendor & distribusi otomatis per area | ⏳ |
 | 4 | Pembayaran cashback manual Kepala Bengkel | ⏳ |
 | 5 | Dashboard KPI, laporan CSV/PDF, notifikasi, deploy | ⏳ |
@@ -53,6 +53,27 @@ cd backend
 DATABASE_URL="mysql://po_app:po_app_dev@127.0.0.1:3306/po_system_test" npx prisma migrate deploy
 DATABASE_URL="mysql://po_app:po_app_dev@127.0.0.1:3306/po_system_test" npm test
 ```
+
+## Alur status PO
+
+```
+DRAFT → MENUNGGU_APPROVAL → APPROVED → DIKIRIM_VENDOR → DIKIRIM → DITERIMA → SELESAI
+  │            │   ↑            │
+  │            │   └─ kembali ke DRAFT (revisi)
+  └─ CANCEL ←──┴────────────────┘   (CANCEL ditolak bila cashback PO sudah diklaim)
+```
+
+- Admin Cabang: buat/edit PO single untuk cabangnya, ajukan, kirim, terima, selesai. Tidak bisa approve.
+- Super Admin: semua aksi, termasuk approve, PO multi cabang, ubah status massal, hapus massal.
+- PO hanya bisa diedit saat DRAFT. Hapus = soft delete, hanya untuk DRAFT (atau CANCEL oleh Super Admin).
+- Nomor PO otomatis `PO/<KODE_CABANG|MULTI>/<YYYYMM>/<0001>`, aman dari bentrok (tabel `document_counters`).
+- Total, subtotal, dan harga dihitung ulang di server; angka dari browser diabaikan.
+
+## Excel
+
+- PO: ekspor (sheet Summary + Details sesuai filter), template, dan impor (baris dengan `REF_PO` sama menjadi satu PO, hasilnya DRAFT).
+- Master data (Vendor, Cabang, Produk, Karyawan): ekspor, template, impor upsert berdasarkan kode.
+- Impor bersifat semua-atau-tidak-sama-sekali: satu baris salah membatalkan seluruh impor dan daftar kesalahan per baris ditampilkan.
 
 ## Keamanan (perbaikan dari versi Firebase)
 

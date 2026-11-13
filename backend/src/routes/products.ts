@@ -24,7 +24,7 @@ const feeFields = {
   feePerusahaanPerPcs: money,
 };
 
-const schema = z
+export const productSchema = z
   .object({
     kodeProduk: z.string().trim().min(1).max(40).transform((s) => s.toUpperCase()),
     namaProduk: z.string().trim().min(1).max(150),
@@ -86,7 +86,7 @@ router.get(
   }),
 );
 
-async function validateRefs(d: z.infer<typeof schema>) {
+async function validateRefs(d: z.infer<typeof productSchema>) {
   await mustExist('vendor', d.vendorId, 'Vendor');
   if (d.areaFees.length) {
     const ids = d.areaFees.map((f) => f.areaId);
@@ -99,7 +99,7 @@ router.post(
   '/',
   requireRole('SUPER_ADMIN'),
   ah(async (req, res) => {
-    const { areaFees, ...data } = schema.parse(req.body);
+    const { areaFees, ...data } = productSchema.parse(req.body);
     await validateRefs({ ...data, areaFees });
     const created = await prisma.product.create({
       data: { ...data, areaFees: { create: areaFees } },
@@ -117,7 +117,7 @@ router.put(
     const id = idParam(req);
     const old = await prisma.product.findFirst({ where: { id, deletedAt: null }, include });
     if (!old) throw notFound('Produk');
-    const { areaFees, ...data } = schema.parse(req.body);
+    const { areaFees, ...data } = productSchema.parse(req.body);
     await validateRefs({ ...data, areaFees });
     // Ganti seluruh tarif area dalam satu transaksi.
     const updated = await prisma.$transaction(async (tx) => {

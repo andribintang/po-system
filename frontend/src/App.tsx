@@ -10,6 +10,10 @@ import { UsersPage } from './pages/Users';
 import { SettingsPage } from './pages/Settings';
 import { AuditPage } from './pages/Audit';
 import { AccountPage } from './pages/Account';
+import { POListPage } from './pages/po/POList';
+import { POFormPage } from './pages/po/POForm';
+import { PODetailPage } from './pages/po/PODetail';
+import { POPrintPage } from './pages/po/POPrint';
 
 function Protected({ children, roles }: { children: ReactNode; roles?: Role[] }) {
   const { user, loading } = useAuth();
@@ -20,6 +24,7 @@ function Protected({ children, roles }: { children: ReactNode; roles?: Role[] })
 }
 
 const SA: Role[] = ['SUPER_ADMIN'];
+const OPS: Role[] = ['SUPER_ADMIN', 'ADMIN'];
 
 export default function App() {
   return (
@@ -27,6 +32,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/po/:id/cetak" element={<Protected roles={OPS}><POPrintPage /></Protected>} />
           <Route element={<Protected><Layout /></Protected>}>
             <Route index element={<DashboardPage />} />
             <Route path="master/:tab?" element={<Protected roles={SA}><MasterDataPage /></Protected>} />
@@ -34,7 +40,10 @@ export default function App() {
             <Route path="pengaturan" element={<Protected roles={SA}><SettingsPage /></Protected>} />
             <Route path="audit" element={<Protected roles={SA}><AuditPage /></Protected>} />
             <Route path="akun" element={<AccountPage />} />
-            <Route path="po" element={<ComingSoon title="Purchase Order" />} />
+            <Route path="po" element={<Protected roles={OPS}><POListPage /></Protected>} />
+            <Route path="po/baru" element={<Protected roles={OPS}><POFormPage /></Protected>} />
+            <Route path="po/:id" element={<Protected roles={OPS}><PODetailPage /></Protected>} />
+            <Route path="po/:id/edit" element={<Protected roles={OPS}><POFormPage /></Protected>} />
             <Route path="cashback" element={<ComingSoon title="Cashback Vendor" />} />
             <Route path="pembayaran" element={<ComingSoon title="Pembayaran Cashback" />} />
             <Route path="laporan" element={<ComingSoon title="Laporan" />} />
